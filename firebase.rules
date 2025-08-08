@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can manage their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users can manage their scan history
+    match /users/{userId}/scans/{scanId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // OTP verification flow
+    match /otpVerifications/{email} {
+      allow create: if true; // Anyone can initiate OTP
+      allow read: if true;   // Anyone can verify OTP
+      allow delete: if true; // Can clear after verification
+      allow update: if false; // Never allow updates
+    }
+    
+    // Community messages board
+    match /messages/{messageId} {
+      // Public visibility
+      allow read: if true;
+      
+      // Authenticated users can post
+      allow create: if request.auth != null;
+      
+      // Authors can edit or others can react
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId || // Owner can edit
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'dislikes']) // Others can react
+      );
+      
+      // Only authors can delete
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Outbreak reports - enhanced security
+    match /outbreakReports/{reportId} {
+      // Public read access
+      allow read: if true;
+      
+      // Authenticated users can submit new reports
+      allow create: if request.auth != null 
+        && request.resource.data.keys().hasOnly([
+          'cropType',
+          'diseaseName',
+          'location',
+          'description',
+          'severity',
+          'imageUrl',
+          'coordinates',
+          'userId',
+          'createdAt',
+          'updatedAt',
+          'status'
+        ])
+        && request.resource.data.userId == request.auth.uid;
+      
+      // Strict update rules for owners only
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'cropType',
+          'diseaseName',
+          'location',
+          'description',
+          'severity',
+          'imageUrl',
+          'updatedAt'
+        ])
+        && request.resource.data.userId == resource.data.userId; // Prevent owner change
+      
+      // Owners can delete their reports
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Default deny-all for unmatched paths
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,22 @@
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyB-VhhAehwaTHs5k03m_dj8eNplm7VIXQY';
+
+const plantKeys = {
+  plantId: 'vzPAe3ManBqWeDXsVhpMcXGKFz28E73nFgyNJWv9cEUnTcH7Jk',
+};
+
+const weatherKeys = {
+  weather: '55c538bf41554ff3b69162709250203&q',
+};
+
+const trefleKeys = {
+  trefle: '3aM_Gw2yCinaKNVexpt0lxz3-RdQaGYeIi8zi8uiOCk',
+};
+
+const apiKeys = {
+  GOOGLE_MAPS_API_KEY,
+  plantKeys,
+  weatherKeys,
+  trefleKeys,
+};
+
+export default apiKeys;

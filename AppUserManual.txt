@@ -1,0 +1,169 @@
+ 	 
+ 
+ 
+Crop Guardian App – User Manual 
+ 
+ Overview 
+Crop Guardian is a mobile and web application designed for farmers and agricultural professionals to manage crop health with the power of AI-driven diagnostics, community collaboration, and real-time insights. 
+ 
+Getting Started Installation 
+1.	Download & Install the app from the Google Play Store or Apple App Store. 
+2.	Launch the app to reach the Welcome Screen. 
+First-Time Users 
+•	Tap “Get Started” to begin the login or sign-up process. 
+•	New users must provide: o 	Full Name o 	Valid Email o 	Secure Password 
+ 
+Authentication Sign In / Sign Up 
+•	Sign In using your email and password. 
+•	Sign Up if you're new. Email verification is required. 
+•	Tap "Forgot Password?" to reset via email. 
+ Switch between Sign In and Sign Up using the toggle button. 
+ 
+Home Screen 
+Upon login, you are greeted with: 
+•	A personalized welcome message 
+•	Profile Image 
+•	Recent notifications 
+•	Grid menu with navigation to: o 	Scan Plant o 	Pest Risk Analyst o 	Community Chat o 	Disease Guide o 	Crop Health o 	Treatment Advice 
+ 
+Scan Plant Diagnose your crops with AI: 
+Steps: 
+1.	Tap Scan Plant 
+2.	Choose: 
+o	Take a Photo o 	Upload from Gallery 
+3.	The image is analyzed to identify: 
+o	Disease o 	Pest o 	Recommended Treatment 
+4.	View, Save or Refresh the result. 
+Powered by Plant.id API and hosted via ImgBB. 
+ 
+Disease Guide 
+Explore a detailed list of plant diseases: 
+Features: 
+•	Search by disease name 
+•	Tap a disease to view: 
+o 	Symptoms o 	Severity o 	Prevention o 	Treatment 
+•	Uses Trefle API for real-time updates 
+ 
+AI Treatment Advice 
+Get AI-powered treatment suggestions: 
+1.	Enter the disease/pest name 
+2.	Receive categorized solutions: 
+o 	Organic o 	Chemical o 	Preventive 
+Uses OpenAI for expert recommendations. 
+ 
+Pest Risk Analyst 
+Analyze pest threats based on weather & location. 
+Features: 
+•	Auto-detect location 
+•	Weather forecast with rain risk 
+•	Tips for crop protection 
+Pull to refresh data 
+Uses WeatherAPI & Expo Location API 
+ 
+Community Chat 
+Engage with fellow farmers and experts: 
+Features: 
+•	Send messages or images (via ImgBB) 
+•	Reply, Edit, Delete, Like, Dislike 
+•	Mute/Unmute notifications 
+	• 	Access Community Guidelines 
+Real-time chat powered by Firebase Firestore 
+ 
+Plant Scan History Access past diagnoses: 
+Features: 
+•	View all scan results 
+•	Search by plant, disease, pest 
+•	Filter by health status 
+•	Tap for full scan detail 
+ 
+Scan Details 
+View complete scan results: 
+•	Plant Name 
+•	Scan Date 
+•	Disease & Pest Info 
+•	Treatment & Prevention 
+•	Share Results 
+ 
+Crop Health Monitor Stay informed on crop outbreaks: 
+Two Sources: 
+•	Global Reports (from FAO AGROVOC) 
+•	Community Reports (user-submitted) Features: 
+•	Local detection 
+•	Search and Severity Filters 
+•	Expandable report cards 
+•	Refresh & error handling 
+•	Report outbreaks 
+ 
+Report New Outbreak Submit a disease outbreak: 
+Steps: 
+1.	Enter: 
+o 	Crop o 	Disease o 	Severity o 	Location o 	Description 
+2.	Upload image 
+3.	Submit (stored as pending for review) 
+Geolocation and image permissions required Saved in Firebase Firestore 
+ 
+Pending Reports () 
+Admins can manage reported outbreaks: 
+Admin Capabilities: 
+•	Approve 
+•	Reject 
+•	Edit 
+•	View reports with details 
+ 
+ 
+Community Guidelines Foster a respectful space: 
+Key Rules: 
+•	Be respectful 
+•	Stay on topic 
+•	No spam or abuse 
+•	Share knowledge 
+•	Prioritize safety 
+Report inappropriate behavior 
+ 
+Settings & Profile 
+From the Home screen: 
+•	Tap to edit profile 
+•	View account details 
+•	Log out 
+ 
+External Services Used 
+Service 	Purpose 
+Firebase 	Auth, Firestore (data storage) 
+ImgBB 	Image hosting 
+Plant.id API 	Image-based plant diagnosis 
+Trefle API 	Plant and disease information
+WeatherAPI 	Weather forecast 
+OpenAI API 	Treatment advice 
+Expo Location 	Geolocation detection 
+ 
+ 
+Data Handling & Security 
+•	All user data is stored securely using Firebase Firestore. 
+•	Images are uploaded to ImgBB and stored via secure URLs. 
+•	Only verified users can post or access sensitive features. 
+•	Admin moderation ensures data quality and safety. 
+ 
+Support & Feedback 
+If you need help or want to provide feedback: 
+•	Email: support@cropguardian.app 
+•	Use the community chat for quick tips and answers 
+ 
+Updates & Maintenance 
+We regularly update the app to: 
+•	Add new features 
+•	Improve performance 
+•	Fix bugs 
+Stay connected to receive in-app notifications about major updates. 
+ 
+Best Practices 
+•	Always ensure you’re connected to the internet. 
+•	Use clear plant images for accurate diagnosis. 
+•	Regularly check Crop Health for new outbreaks. 
+•	Report issues to help protect the community. 
+ 
+ 
+ 
+ 
+Conclusion 
+Crop Guardian empowers farmers with technology to detect, prevent, and treat crop issues swiftly and accurately. With AI, community insights, and global data, your crops are now better protected than ever. 
+Happy Farming!  
