@@ -238,6 +238,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 24,
     paddingTop: 48,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   backButton: {
     padding: 8,

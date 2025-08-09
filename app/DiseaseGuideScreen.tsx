@@ -160,15 +160,21 @@ const DiseaseGuideScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Disease Guide</Text>
-        <TouchableOpacity
-          style={styles.backButton}
+      <LinearGradient
+        colors={['#46a200', '#39D2C0']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <TouchableOpacity 
+          style={styles.backButton} 
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-      </View>
+        <Text style={styles.headerTitle}>Disease Guide</Text>
+        <View style={{ width: 40 }} />
+      </LinearGradient>
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
@@ -210,6 +216,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerTitle: {
     fontSize: 24,

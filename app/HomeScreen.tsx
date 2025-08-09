@@ -172,6 +172,7 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.userName}>{userName}</Text>
             </View>
           </TouchableOpacity>
+        <View style={styles.iconGroup}>
           <TouchableOpacity 
             style={styles.notificationButton}
             onPress={() => setShowNotifications(true)}
@@ -185,6 +186,7 @@ const HomeScreen: React.FC = () => {
           >
             <Ionicons name="help-circle-outline" size={24} color="white" />
           </TouchableOpacity>
+        </View>
         </LinearGradient>
 
         <Modal
@@ -337,6 +339,10 @@ const styles = StyleSheet.create({
   helpButton: {
     padding: 8,
     marginLeft: 12,
+  },
+  iconGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   welcomeBanner: {
     borderRadius: 16,
