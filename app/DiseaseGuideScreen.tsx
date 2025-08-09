@@ -1,24 +1,25 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { doc, getDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
-  Image,
-  StyleSheet,
-  SafeAreaView,
-  Platform,
-  ActivityIndicator,
-  Alert
+  View
 } from 'react-native';
-import axios from 'axios';
-import { Ionicons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { auth, db } from '../firebaseConfig';
 import { RootStackParamList } from './navigationTypes';
-import { SubscriptionManager } from '../utils/subscription';
 
 type Disease = {
   id: number;
@@ -53,13 +54,34 @@ const DiseaseGuideScreen: React.FC = () => {
   const API_TOKEN = '3aM_Gw2yCinaKNVexpt0lxz3-RdQaGYeIi8zi8uiOCk';
 
   useEffect(() => {
-    fetchDiseases();
     checkSubscription();
   }, []);
 
+  useEffect(() => {
+    if (hasPremiumAccess !== null) {
+      fetchDiseases();
+    }
+  }, [hasPremiumAccess]);
+
   const checkSubscription = async () => {
-    const access = await SubscriptionManager.hasPremiumAccess();
-    setHasPremiumAccess(access);
+    if (!auth.currentUser) {
+      setHasPremiumAccess(false);
+      return;
+    }
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (userData?.subscription) {
+        setHasPremiumAccess(userData.subscription.tier === 'premium' && userData.subscription.status === 'active');
+      } else {
+        setHasPremiumAccess(false);
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      setHasPremiumAccess(false);
+    }
   };
 
   const fetchDiseases = async () => {
@@ -77,7 +99,9 @@ const DiseaseGuideScreen: React.FC = () => {
       const formattedData: Disease[] = data.map((plant) => ({
         id: plant.id,
         title: plant.common_name || plant.scientific_name,
-        description: hasPremiumAccess ? (plant.family_common_name || 'No description available.') : 'Subscribe to see description.',
+        description: hasPremiumAccess 
+          ? (plant.family_common_name || 'No description available.') 
+          : 'Subscribe to Premium Plan to see full descriptions and treatment guides.',
         image: plant.image_url || 'https://via.placeholder.com/800x800',
         severity: 'Moderate',
         type: 'Fungal',
@@ -122,6 +146,14 @@ const DiseaseGuideScreen: React.FC = () => {
             <Text style={styles.tagText}>{item.type}</Text>
           </View>
         </View>
+        {!hasPremiumAccess && (
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate('SubscriptionScreen')}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -272,6 +304,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
+  },
+  upgradeButton: {
+    backgroundColor: '#46A200',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  upgradeButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
