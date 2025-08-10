@@ -1,7 +1,7 @@
 export const GOOGLE_MAPS_API_KEY = 'AIzaSyB-VhhAehwaTHs5k03m_dj8eNplm7VIXQY';
 
 const plantKeys = {
-  plantId: 'vzPAe3ManBqWeDXsVhpMcXGKFz28E73nFgyNJWv9cEUnTcH7Jk',
+  plantId: '3iUWKzCumsMFk7kWg2ajuHAzza1w9jcyzpQbAbS37WbNK1OJLf',
 };
 
 const weatherKeys = {
