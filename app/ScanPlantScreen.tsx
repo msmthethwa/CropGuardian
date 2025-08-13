@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
+import { plantModel } from '../utils/plantModelFixed';
+import { getDiseaseInfo, getPestInfo } from '../utils/diseaseData';
 import apiKeys from '../config/apiKeys';
+import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,14 +28,18 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadImageToImgBB } from '../utils/imgbb';
 import { SubscriptionManager } from '../utils/subscription';
 
-interface PlantDiseaseResult {
+interface PlantHealthResult {
   plantName: string;
-  diseaseName: string;
-  cause: string;
-  treatment: string;
-  prevention: string;
-  pestName: string;
-  pestPrevention: string;
+  scientificName: string;
+  confidence: number;
+  isHealthy: boolean;
+  diseases: any[];
+  pests: any[];
+  overallHealth: number;
+  recommendations: string[];
+  nextSteps: string[];
+  scanDate: Date;
+  imageUrl: string;
 }
 
 const ScanPlantScreen = () => {
@@ -44,14 +50,18 @@ const ScanPlantScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [results, setResults] = useState<PlantDiseaseResult>({
+  const [results, setResults] = useState<PlantHealthResult>({
     plantName: '',
-    diseaseName: '',
-    cause: '',
-    treatment: '',
-    prevention: '',
-    pestName: '',
-    pestPrevention: '',
+    scientificName: '',
+    confidence: 0,
+    isHealthy: true,
+    diseases: [],
+    pests: [],
+    overallHealth: 100,
+    recommendations: [],
+    nextSteps: [],
+    scanDate: new Date(),
+    imageUrl: '',
   });
   const [hasSaved, setHasSaved] = useState(false);
 
@@ -75,7 +85,6 @@ const ScanPlantScreen = () => {
         updatedAt: serverTimestamp(),
       });
 
-      //Alert.alert('Success', 'Scan results saved successfully!');
       setHasSaved(true);
     } catch (error) {
       console.error('Error saving scan results:', error);
@@ -86,38 +95,13 @@ const ScanPlantScreen = () => {
   const handleImageProcessing = async (base64Image: string) => {
     setIsLoading(true);
     try {
-      const requestData = {
-        images: [`data:image/jpeg;base64,${base64Image}`],
-        similar_images: true,
-      };
+      // Use the AI model to analyze the image
+      const result = await plantModel.analyzeImage(`data:image/jpeg;base64,${base64Image}`);
 
-      const response = await axios.post('https://api.plant.id/v2/identify', requestData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Api-Key': apiKeys.plantKeys.plantId,
-        },
-      });
-
-      if (response.data?.suggestions?.length > 0) {
-        const bestMatch = response.data.suggestions[0];
-        const disease = bestMatch.diseases?.[0] || {};
-        const pest = bestMatch.pests?.[0] || {};
-
-        setResults({
-          plantName: bestMatch.plant_name || 'Unknown',
-          diseaseName: disease.name || 'No disease detected',
-          cause: disease.cause || 'N/A',
-          treatment: disease.treatment || 'N/A',
-          prevention: disease.prevention || 'N/A',
-          pestName: pest.name || 'No pest detected',
-          pestPrevention: pest.prevention || 'N/A',
-        });
-        setHasResult(true);
-      } else {
-        Alert.alert('No results', 'No plant, disease, or pest detected.');
-      }
+      setResults(result);
+      setHasResult(true);
     } catch (error) {
-      console.error('API Error:', error);
+      console.error('Model Error:', error);
       Alert.alert('Error', 'Failed to analyze image. Please try again.');
     } finally {
       setIsLoading(false);
@@ -259,12 +243,16 @@ const ScanPlantScreen = () => {
             setImageUri(null);
             setResults({
               plantName: '',
-              diseaseName: '',
-              cause: '',
-              treatment: '',
-              prevention: '',
-              pestName: '',
-              pestPrevention: '',
+              scientificName: '',
+              confidence: 0,
+              isHealthy: true,
+              diseases: [],
+              pests: [],
+              overallHealth: 100,
+              recommendations: [],
+              nextSteps: [],
+              scanDate: new Date(),
+              imageUrl: '',
             });
           }}>
             <MaterialIcons name="refresh" size={24} color="#46A200" />
@@ -279,33 +267,38 @@ const ScanPlantScreen = () => {
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Disease</Text>
-                <Text style={styles.resultValue}>{results.diseaseName}</Text>
+                <Text style={styles.resultLabel}>Scientific Name</Text>
+                <Text style={styles.resultValue}>{results.scientificName}</Text>
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Cause</Text>
-                <Text style={styles.resultValue}>{results.cause}</Text>
+                <Text style={styles.resultLabel}>Health Status</Text>
+                <Text style={styles.resultValue}>{results.isHealthy ? 'Healthy' : 'Issues Detected'}</Text>
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Treatment</Text>
-                <Text style={styles.resultValue}>{results.treatment}</Text>
+                <Text style={styles.resultLabel}>Overall Health</Text>
+                <Text style={styles.resultValue}>{results.overallHealth}%</Text>
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Prevention</Text>
-                <Text style={styles.resultValue}>{results.prevention}</Text>
+                <Text style={styles.resultLabel}>Diseases</Text>
+                <Text style={styles.resultValue}>{results.diseases.length > 0 ? results.diseases.map(d => d.name).join(', ') : 'None detected'}</Text>
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Pest Name</Text>
-                <Text style={styles.resultValue}>{results.pestName}</Text>
+                <Text style={styles.resultLabel}>Pests</Text>
+                <Text style={styles.resultValue}>{results.pests.length > 0 ? results.pests.map(p => p.name).join(', ') : 'None detected'}</Text>
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Pest Prevention</Text>
-                <Text style={styles.resultValue}>{results.pestPrevention}</Text>
+                <Text style={styles.resultLabel}>Recommendations</Text>
+                <Text style={styles.resultValue}>{results.recommendations.join('\n')}</Text>
+              </View>
+
+              <View style={styles.resultItem}>
+                <Text style={styles.resultLabel}>Next Steps</Text>
+                <Text style={styles.resultValue}>{results.nextSteps.join('\n')}</Text>
               </View>
             </View>
           ) : (
