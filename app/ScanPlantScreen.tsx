@@ -78,14 +78,25 @@ const ScanPlantScreen = () => {
       const userId = auth.currentUser.uid;
       const scansCollectionRef = collection(db, 'users', userId, 'scans');
       
-      await addDoc(scansCollectionRef, {
+      const scanData = {
         ...results,
         imageUrl: imageUri,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+        // Additional fields for better display
+        scientificName: results.scientificName || '',
+        confidence: results.confidence || 0,
+        overallHealth: results.overallHealth || 100,
+        recommendations: results.recommendations || [],
+        nextSteps: results.nextSteps || [],
+      };
 
+      const docRef = await addDoc(scansCollectionRef, scanData);
+      
+      // Navigate to details screen with the new scan ID
       setHasSaved(true);
+      navigation.navigate('ScanDetailsScreen', { scanId: docRef.id });
+      
     } catch (error) {
       console.error('Error saving scan results:', error);
       Alert.alert('Error', 'Failed to save scan results. Please try again.');

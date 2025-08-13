@@ -22,6 +22,7 @@ import { RootStackParamList } from './navigationTypes';
 interface ScanDetails {
   id: string;
   plantName: string;
+  scientificName: string;
   imageUrl: string;
   createdAt: Date;
   diseaseName: string;
@@ -30,6 +31,12 @@ interface ScanDetails {
   prevention: string;
   pestName: string;
   pestPrevention: string;
+  confidence: number;
+  overallHealth: number;
+  recommendations: string[];
+  nextSteps: string[];
+  diseases: any[];
+  pests: any[];
 }
 
 const ScanDetailsScreen = () => {
@@ -58,7 +65,8 @@ const ScanDetailsScreen = () => {
           setScanDetails({
             id: docSnap.id,
             plantName: data.plantName || 'Unknown Plant',
-            imageUrl: data.imageUrl || '', // This should be the ImgBB URL
+            scientificName: data.scientificName || '',
+            imageUrl: data.imageUrl || '',
             createdAt: data.createdAt?.toDate() || new Date(),
             diseaseName: data.diseaseName || 'No disease detected',
             cause: data.cause || 'N/A',
@@ -66,6 +74,12 @@ const ScanDetailsScreen = () => {
             prevention: data.prevention || 'N/A',
             pestName: data.pestName || 'No pest detected',
             pestPrevention: data.pestPrevention || 'N/A',
+            confidence: data.confidence || 0,
+            overallHealth: data.overallHealth || 100,
+            recommendations: data.recommendations || [],
+            nextSteps: data.nextSteps || [],
+            diseases: data.diseases || [],
+            pests: data.pests || [],
           });
         } else {
           setError('Scan not found');
@@ -192,6 +206,11 @@ const ScanDetailsScreen = () => {
           </View>
 
           <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Scientific Name</Text>
+            <Text style={styles.detailValue}>{scanDetails.scientificName || 'N/A'}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Scan Date</Text>
             <Text style={styles.detailValue}>
               {scanDetails.createdAt.toLocaleDateString('en-US', { 
@@ -202,6 +221,22 @@ const ScanDetailsScreen = () => {
                 minute: '2-digit'
               })}
             </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Confidence Score</Text>
+            <View style={styles.confidenceContainer}>
+              <View style={[styles.confidenceBar, { width: `${Math.min(scanDetails.confidence * 100, 100)}%` }]} />
+              <Text style={styles.confidenceText}>{Math.round(scanDetails.confidence * 100)}%</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Overall Health</Text>
+            <View style={styles.healthContainer}>
+              <View style={[styles.healthBar, { width: `${scanDetails.overallHealth}%` }]} />
+              <Text style={styles.healthText}>{scanDetails.overallHealth}%</Text>
+            </View>
           </View>
 
           <View style={styles.sectionDivider}>
@@ -229,6 +264,28 @@ const ScanDetailsScreen = () => {
             <Text style={styles.detailLabel}>Prevention</Text>
             <Text style={styles.detailValue}>{scanDetails.prevention}</Text>
           </View>
+
+          {scanDetails.recommendations && scanDetails.recommendations.length > 0 && (
+            <>
+              <View style={styles.sectionDivider}>
+                <Text style={styles.sectionTitle}>Recommendations</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailValue}>{scanDetails.recommendations.join('\n')}</Text>
+              </View>
+            </>
+          )}
+
+          {scanDetails.nextSteps && scanDetails.nextSteps.length > 0 && (
+            <>
+              <View style={styles.sectionDivider}>
+                <Text style={styles.sectionTitle}>Next Steps</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailValue}>{scanDetails.nextSteps.join('\n')}</Text>
+              </View>
+            </>
+          )}
 
           {scanDetails.pestName !== 'No pest detected' && (
             <>
@@ -359,6 +416,38 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  confidenceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  confidenceBar: {
+    height: 8,
+    backgroundColor: '#46A200',
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  confidenceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  healthContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  healthBar: {
+    height: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  healthText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
   },

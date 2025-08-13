@@ -25,6 +25,7 @@ import { RootStackParamList } from './navigationTypes';
 interface PlantScan {
   id: string;
   plantName: string;
+  scientificName: string;
   imageUrl: string;
   timestamp: Date;
   diseaseName: string;
@@ -33,6 +34,7 @@ interface PlantScan {
   prevention: string;
   pestName: string;
   pestPrevention: string;
+  overallHealth: number;
 }
 
 type FilterOption = 'all' | 'healthy' | 'unhealthy' | 'pest';
@@ -62,6 +64,7 @@ const PlantScanHistoryScreen = () => {
         return {
           id: doc.id,
           plantName: data.plantName || 'Unknown Plant',
+          scientificName: data.scientificName || '',
           imageUrl: imageUrl,
           timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
           diseaseName: data.diseaseName || 'No disease detected',
@@ -70,6 +73,7 @@ const PlantScanHistoryScreen = () => {
           prevention: data.prevention || 'N/A',
           pestName: data.pestName || 'No pest detected',
           pestPrevention: data.pestPrevention || 'N/A',
+          overallHealth: data.overallHealth || 100,
         };
       });
       setScans(scansData);
@@ -84,6 +88,13 @@ const PlantScanHistoryScreen = () => {
 
   const getStatusColor = (diseaseName: string) => {
     return diseaseName === 'No disease detected' ? '#10B981' : '#EF4444';
+  };
+
+  const getHealthColor = (percentage: number): string => {
+    if (percentage >= 80) return '#4CAF50';
+    if (percentage >= 60) return '#FFC107';
+    if (percentage >= 40) return '#FF9800';
+    return '#F44336';
   };
 
   const filteredScans = scans.filter(scan => {
@@ -113,43 +124,56 @@ const PlantScanHistoryScreen = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const renderScanCard = ({ item }: { item: PlantScan }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => navigation.navigate('ScanDetailsScreen', { scanId: item.id })}
-    >
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
-        <View style={[styles.statusBadge, { 
-          backgroundColor: getStatusColor(item.diseaseName) 
-        }]}>
-          <Text style={styles.statusText}>
-            {item.diseaseName === 'No disease detected' ? 'Healthy' : 'Unhealthy'}
-          </Text>
+  const renderScanCard = ({ item }: { item: PlantScan }) => {
+    const scan = item;
+    return (
+      <TouchableOpacity 
+        style={styles.card}
+        onPress={() => navigation.navigate('ScanDetailsScreen', { scanId: scan.id })}
+      >
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: scan.imageUrl }} style={styles.image} />
+          <View style={[styles.statusBadge, { 
+            backgroundColor: getStatusColor(scan.diseaseName) 
+          }]}>
+            <Text style={styles.statusText}>
+              {scan.diseaseName === 'No disease detected' ? 'Healthy' : 'Unhealthy'}
+            </Text>
+          </View>
         </View>
-      </View>
-      
-      <View style={styles.cardContent}>
-        <Text style={styles.plantName} numberOfLines={1}>{item.plantName}</Text>
-        <Text style={styles.timestamp}>
-          {item.timestamp.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            hour: 'numeric', 
-            minute: '2-digit' 
-          })}
-        </Text>
-        <Text style={[styles.disease, { color: getStatusColor(item.diseaseName) }]}>
-          {item.diseaseName}
-        </Text>
-        {item.pestName !== 'No pest detected' && (
-          <Text style={[styles.disease, { color: '#EF4444' }]}>
-            Pest: {item.pestName}
+        
+        <View style={styles.cardContent}>
+          <Text style={styles.plantName} numberOfLines={1}>{scan.plantName}</Text>
+          {scan.scientificName && (
+            <Text style={styles.scientificName} numberOfLines={1}>
+              {scan.scientificName}
+            </Text>
+          )}
+          <Text style={styles.timestamp}>
+            {scan.timestamp.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              hour: 'numeric', 
+              minute: '2-digit' 
+            })}
           </Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+          <View style={styles.healthInfo}>
+            <Text style={[styles.healthPercentage, { color: getHealthColor(scan.overallHealth || 100) }]}>
+              {scan.overallHealth || 100}% Health
+            </Text>
+          </View>
+          <Text style={[styles.disease, { color: getStatusColor(scan.diseaseName) }]}>
+            {scan.diseaseName}
+          </Text>
+          {scan.pestName !== 'No pest detected' && (
+            <Text style={[styles.disease, { color: '#EF4444' }]}>
+              Pest: {scan.pestName}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -367,11 +391,25 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 4,
   },
+  scientificName: {
+    fontFamily: 'Roboto-Regular',
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
   timestamp: {
     fontFamily: 'Roboto-Light',
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 8,
+  },
+  healthInfo: {
+    marginBottom: 8,
+  },
+  healthPercentage: {
+    fontFamily: 'Roboto-Medium',
+    fontSize: 14,
+    marginBottom: 4,
   },
   disease: {
     fontFamily: 'Roboto-Medium',
