@@ -64,6 +64,7 @@ const ScanPlantScreen = () => {
     imageUrl: '',
   });
   const [hasSaved, setHasSaved] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (hasResult && !hasSaved) {
@@ -83,7 +84,6 @@ const ScanPlantScreen = () => {
         imageUrl: imageUri,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        // Additional fields for better display
         scientificName: results.scientificName || '',
         confidence: results.confidence || 0,
         overallHealth: results.overallHealth || 100,
@@ -93,7 +93,6 @@ const ScanPlantScreen = () => {
 
       const docRef = await addDoc(scansCollectionRef, scanData);
       
-      // Mark as saved but don't navigate automatically
       setHasSaved(true);
       
     } catch (error) {
@@ -105,9 +104,7 @@ const ScanPlantScreen = () => {
   const handleImageProcessing = async (base64Image: string) => {
     setIsLoading(true);
     try {
-      // Use the AI model to analyze the image
       const result = await plantModel.analyzeImage(`data:image/jpeg;base64,${base64Image}`);
-
       setResults(result);
       setHasResult(true);
     } catch (error) {
@@ -168,6 +165,13 @@ const ScanPlantScreen = () => {
     }
   };
 
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {isLoading && (
@@ -204,7 +208,6 @@ const ScanPlantScreen = () => {
         </LinearGradient>
 
         <ScrollView style={styles.scrollView}>
-          {/* Image Display */}
           <View style={styles.imageContainer}>
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={styles.imagePreview} />
@@ -219,7 +222,6 @@ const ScanPlantScreen = () => {
             )}
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -242,31 +244,30 @@ const ScanPlantScreen = () => {
             </View>
           </View>
 
-          {/* Results Section */}
           {hasResult ? (
             <View style={styles.resultsCard}>
               <View style={styles.resultsHeader}>
                 <Text style={styles.resultsTitle}>Scan Results</Text>
-          <TouchableOpacity onPress={() => {
-            setHasResult(false);
-            setHasSaved(false);
-            setImageUri(null);
-            setResults({
-              plantName: '',
-              scientificName: '',
-              confidence: 0,
-              isHealthy: true,
-              diseases: [],
-              pests: [],
-              overallHealth: 100,
-              recommendations: [],
-              nextSteps: [],
-              scanDate: new Date(),
-              imageUrl: '',
-            });
-          }}>
-            <MaterialIcons name="refresh" size={24} color="#46A200" />
-          </TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                  setHasResult(false);
+                  setHasSaved(false);
+                  setImageUri(null);
+                  setResults({
+                    plantName: '',
+                    scientificName: '',
+                    confidence: 0,
+                    isHealthy: true,
+                    diseases: [],
+                    pests: [],
+                    overallHealth: 100,
+                    recommendations: [],
+                    nextSteps: [],
+                    scanDate: new Date(),
+                    imageUrl: '',
+                  });
+                }}>
+                  <MaterialIcons name="refresh" size={24} color="#46A200" />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.divider} />
@@ -283,33 +284,180 @@ const ScanPlantScreen = () => {
 
               <View style={styles.resultItem}>
                 <Text style={styles.resultLabel}>Health Status</Text>
-                <Text style={styles.resultValue}>{results.isHealthy ? 'Healthy' : 'Issues Detected'}</Text>
+                <Text style={[styles.resultValue, { color: results.isHealthy ? '#46A200' : '#FF6B6B' }]}>
+                  {results.isHealthy ? 'Healthy' : 'Issues Detected'}
+                </Text>
               </View>
 
               <View style={styles.resultItem}>
                 <Text style={styles.resultLabel}>Overall Health</Text>
-                <Text style={styles.resultValue}>{results.overallHealth}%</Text>
+                <Text style={[styles.resultValue, { fontWeight: 'bold', color: results.overallHealth >= 80 ? '#46A200' : results.overallHealth >= 60 ? '#FFA500' : '#FF6B6B' }]}>
+                  {results.overallHealth}%
+                </Text>
               </View>
 
               <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Diseases</Text>
-                <Text style={styles.resultValue}>{results.diseases.length > 0 ? results.diseases.map(d => d.name).join(', ') : 'None detected'}</Text>
+                <Text style={styles.resultLabel}>Confidence Level</Text>
+                <Text style={styles.resultValue}>{Math.round(results.confidence * 100)}%</Text>
               </View>
 
-              <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Pests</Text>
-                <Text style={styles.resultValue}>{results.pests.length > 0 ? results.pests.map(p => p.name).join(', ') : 'None detected'}</Text>
-              </View>
+              {results.diseases.length > 0 && (
+                <View>
+                  <TouchableOpacity 
+                    style={styles.expandableHeader}
+                    onPress={() => toggleSection('diseases')}
+                  >
+                    <Text style={styles.sectionTitle}>Diseases Detected ({results.diseases.length})</Text>
+                    <Ionicons 
+                      name={expandedSections.diseases ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color="#46A200" 
+                    />
+                  </TouchableOpacity>
 
-              <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Recommendations</Text>
-                <Text style={styles.resultValue}>{results.recommendations.join('\n')}</Text>
-              </View>
+                  {expandedSections.diseases && (
+                    <View style={styles.expandedContent}>
+                      {results.diseases.map((disease, index) => (
+                        <View key={index} style={styles.detailCard}>
+                          <Text style={styles.detailTitle}>{disease.name}</Text>
+                          <Text style={styles.detailSubtitle}>{disease.scientificName}</Text>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Common Names:</Text>
+                            <Text style={styles.detailValue}>{disease.commonNames.join(', ')}</Text>
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Description:</Text>
+                            <Text style={styles.detailValue}>{disease.description}</Text>
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Causes:</Text>
+                            {disease.causes.map((cause: string, i: number) => (
+                              <Text key={i} style={styles.bulletItem}>• {cause}</Text>
+                            ))}
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Symptoms:</Text>
+                            {disease.symptoms.map((symptom: string, i: number) => (
+                              <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
+                            ))}
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Treatments:</Text>
+                            {disease.treatments.map((treatment: any, i: number) => (
+                              <View key={i} style={styles.treatmentCard}>
+                                <Text style={styles.treatmentName}>{treatment.name}</Text>
+                                <Text style={styles.treatmentDescription}>{treatment.description}</Text>
+                                <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
+                                <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
+                                <Text style={styles.treatmentEffectiveness}>Effectiveness: {treatment.effectiveness}%</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
 
-              <View style={styles.resultItem}>
-                <Text style={styles.resultLabel}>Next Steps</Text>
-                <Text style={styles.resultValue}>{results.nextSteps.join('\n')}</Text>
-              </View>
+              {results.pests.length > 0 && (
+                <View>
+                  <TouchableOpacity 
+                    style={styles.expandableHeader}
+                    onPress={() => toggleSection('pests')}
+                  >
+                    <Text style={styles.sectionTitle}>Pests Detected ({results.pests.length})</Text>
+                    <Ionicons 
+                      name={expandedSections.pests ? "chevron-up" : "chevron-down"} 
+                      size={20} 
+                      color="#46A200" 
+                    />
+                  </TouchableOpacity>
+
+                  {expandedSections.pests && (
+                    <View style={styles.expandedContent}>
+                      {results.pests.map((pest, index) => (
+                        <View key={index} style={styles.detailCard}>
+                          <Text style={styles.detailTitle}>{pest.name}</Text>
+                          <Text style={styles.detailSubtitle}>{pest.scientificName}</Text>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Type:</Text>
+                            <Text style={styles.detailValue}>{pest.type}</Text>
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Description:</Text>
+                            <Text style={styles.detailValue}>{pest.description}</Text>
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Damage/Symptoms:</Text>
+                            {pest.symptoms.map((symptom: string, i: number) => (
+                              <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
+                            ))}
+                          </View>
+                          <View style={styles.detailSection}>
+                            <Text style={styles.detailLabel}>Treatments:</Text>
+                            {pest.treatments.map((treatment: any, i: number) => (
+                              <View key={i} style={styles.treatmentCard}>
+                                <Text style={styles.treatmentName}>{treatment.name}</Text>
+                                <Text style={styles.treatmentDescription}>{treatment.description}</Text>
+                                <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
+                                <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              <TouchableOpacity 
+                style={styles.expandableHeader}
+                onPress={() => toggleSection('recommendations')}
+              >
+                <Text style={styles.sectionTitle}>Recommendations</Text>
+                <Ionicons 
+                  name={expandedSections.recommendations ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color="#46A200" 
+                />
+              </TouchableOpacity>
+
+              {expandedSections.recommendations && (
+                <View style={styles.expandedContent}>
+                  {results.recommendations.map((rec, index) => (
+                    <Text key={index} style={styles.bulletItem}>• {rec}</Text>
+                  ))}
+                </View>
+              )}
+
+              <TouchableOpacity 
+                style={styles.expandableHeader}
+                onPress={() => toggleSection('nextSteps')}
+              >
+                <Text style={styles.sectionTitle}>Next Steps</Text>
+                <Ionicons 
+                  name={expandedSections.nextSteps ? "chevron-up" : "chevron-down"} 
+                  size={20} 
+                  color="#46A200" 
+                />
+              </TouchableOpacity>
+
+              {expandedSections.nextSteps && (
+                <View style={styles.expandedContent}>
+                  {results.nextSteps.map((step, index) => (
+                    <Text key={index} style={styles.bulletItem}>• {step}</Text>
+                  ))}
+                </View>
+              )}
+
+              {results.diseases.length === 0 && results.pests.length === 0 && (
+                <View style={styles.healthyStatus}>
+                  <Ionicons name="checkmark-circle" size={24} color="#46A200" />
+                  <Text style={styles.healthyText}>Plant appears to be healthy! No diseases or pests detected.</Text>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.emptyState}>
@@ -318,21 +466,6 @@ const ScanPlantScreen = () => {
               </Text>
             </View>
           )}
-
-          {/* Save Results Button */}
-          {/* Removed Save Results Button for automatic saving */}
-          {/*
-          {hasResult && (
-            <View style={styles.saveButtonContainer}>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={saveScanResults}
-              >
-                <Text style={styles.saveButtonText}>Save Results</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          */}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -340,17 +473,6 @@ const ScanPlantScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  imagePreview: {
-    width: '100%',
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#46A200',
-    fontSize: 16,
-  },
   safeArea: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -401,6 +523,12 @@ const styles = StyleSheet.create({
   imageContainer: {
     padding: 24,
     paddingBottom: 16,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 300,
+    borderRadius: 10,
+    marginBottom: 20,
   },
   imagePlaceholder: {
     backgroundColor: '#46A200',
@@ -566,6 +694,95 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#46A200',
+    fontSize: 16,
+  },
+  expandableHeader: {
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  expandedContent: {
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  detailCard: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    elevation: 1,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  detailSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  detailSection: {
+    marginBottom: 8,
+  },
+  detailLabel: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  detailValue: {
+    color: '#666',
+  },
+  bulletItem: {
+    marginLeft: 10,
+    color: '#333',
+  },
+  treatmentCard: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#e9f5e9',
+    borderRadius: 8,
+  },
+  treatmentName: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  treatmentDescription: {
+    color: '#666',
+  },
+  treatmentMethod: {
+    fontStyle: 'italic',
+    color: '#666',
+  },
+  treatmentFrequency: {
+    color: '#666',
+  },
+  treatmentEffectiveness: {
+    color: '#666',
+  },
+  healthyStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  healthyText: {
+    marginLeft: 10,
+    color: '#46A200',
+    fontWeight: 'bold',
   },
 });
 
