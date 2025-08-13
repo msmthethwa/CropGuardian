@@ -93,9 +93,8 @@ const ScanPlantScreen = () => {
 
       const docRef = await addDoc(scansCollectionRef, scanData);
       
-      // Navigate to details screen with the new scan ID
+      // Mark as saved but don't navigate automatically
       setHasSaved(true);
-      navigation.navigate('ScanDetailsScreen', { scanId: docRef.id });
       
     } catch (error) {
       console.error('Error saving scan results:', error);
