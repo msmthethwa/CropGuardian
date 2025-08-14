@@ -13,10 +13,11 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,27 +47,22 @@ const PlantScanHistoryScreen = () => {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<FilterOption>('all');
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
-
-    const scansRef = collection(db, 'users', auth.currentUser.uid, 'scans');
-    const q = query(
-      scansRef,
-      orderBy('createdAt', 'desc')
-    );
+    checkSubscription();
+    const scansRef = collection(db, 'users', auth.currentUser?.uid || '', 'scans');
+    const q = query(scansRef, orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const scansData = snapshot.docs.map(doc => {
         const data = doc.data();
-        // Ensure the image URL is from ImgBB
-        const imageUrl = data.imageUrl || '';
         return {
           id: doc.id,
           plantName: data.plantName || 'Unknown Plant',
           scientificName: data.scientificName || '',
-          imageUrl: imageUrl,
-          timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
+          imageUrl: data.imageUrl || '',
+          timestamp: data.createdAt?.toDate() || new Date(),
           diseases: data.diseases || [],
           pests: data.pests || [],
           overallHealth: data.overallHealth || 100,
@@ -86,6 +82,27 @@ const PlantScanHistoryScreen = () => {
     return () => unsubscribe();
   }, []);
 
+  const checkSubscription = async () => {
+    if (!auth.currentUser) {
+      setHasPremiumAccess(false);
+      return;
+    }
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (userData?.subscription) {
+        setHasPremiumAccess(userData.subscription.tier === 'premium' && userData.subscription.status === 'active');
+      } else {
+        setHasPremiumAccess(false);
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      setHasPremiumAccess(false);
+    }
+  };
+
   const getStatusColor = (isHealthy: boolean) => {
     return isHealthy ? '#10B981' : '#EF4444';
   };
@@ -98,13 +115,11 @@ const PlantScanHistoryScreen = () => {
   };
 
   const filteredScans = scans.filter(scan => {
-    // Apply search filter
     const matchesSearch = searchQuery === '' || 
       scan.plantName.toLowerCase().includes(searchQuery.toLowerCase()) || 
       (scan.diseases && scan.diseases.some(d => d.name && d.name.toLowerCase().includes(searchQuery.toLowerCase()))) ||
       (scan.pests && scan.pests.some(p => p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())));
     
-    // Apply status filter
     let matchesFilter = true;
     switch (selectedFilter) {
       case 'healthy':
@@ -134,7 +149,20 @@ const PlantScanHistoryScreen = () => {
     return (
       <TouchableOpacity 
         style={styles.card}
-        onPress={() => navigation.navigate('ScanDetailsScreen', { scanId: scan.id })}
+        onPress={() => {
+          if (hasPremiumAccess) {
+            navigation.navigate('ScanDetailsScreen', { scanId: scan.id });
+          } else {
+            Alert.alert(
+              'Premium Feature',
+              'Upgrade to premium to view detailed scan results and treatment guides',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Upgrade', onPress: () => navigation.navigate('SubscriptionScreen') }
+              ]
+            );
+          }
+        }}
       >
         <View style={styles.imageContainer}>
           <Image source={{ uri: scan.imageUrl }} style={styles.image} />
@@ -174,6 +202,11 @@ const PlantScanHistoryScreen = () => {
             <Text style={[styles.disease, { color: '#EF4444' }]}>
               Pest: {pestName}
             </Text>
+          )}
+          {!hasPremiumAccess && (
+            <View style={styles.upgradeBadge}>
+              <Text style={styles.upgradeBadgeText}>Premium</Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -490,6 +523,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto-Medium',
     fontSize: 16,
     color: '#1F2937',
+  },
+  upgradeBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#46A200',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  upgradeBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 

@@ -15,16 +15,13 @@ import {
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { plantModel } from '../utils/plantModelFixed';
-import { getDiseaseInfo, getPestInfo } from '../utils/diseaseData';
-import apiKeys from '../config/apiKeys';
-import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from './navigationTypes';
 import { auth, db } from '../firebaseConfig';
 import * as FileSystem from 'expo-file-system';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { uploadImageToImgBB } from '../utils/imgbb';
 import { SubscriptionManager } from '../utils/subscription';
 
@@ -65,12 +62,38 @@ const ScanPlantScreen = () => {
   });
   const [hasSaved, setHasSaved] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
+
+  useEffect(() => {
+    checkSubscription();
+  }, []);
 
   useEffect(() => {
     if (hasResult && !hasSaved) {
       saveScanResults();
     }
   }, [hasResult, hasSaved]);
+
+  const checkSubscription = async () => {
+    if (!auth.currentUser) {
+      setHasPremiumAccess(false);
+      return;
+    }
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (userData?.subscription) {
+        setHasPremiumAccess(userData.subscription.tier === 'premium' && userData.subscription.status === 'active');
+      } else {
+        setHasPremiumAccess(false);
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      setHasPremiumAccess(false);
+    }
+  };
 
   const saveScanResults = async () => {
     if (!auth.currentUser || !imageUri || !hasResult) return;
@@ -92,9 +115,7 @@ const ScanPlantScreen = () => {
       };
 
       const docRef = await addDoc(scansCollectionRef, scanData);
-      
       setHasSaved(true);
-      
     } catch (error) {
       console.error('Error saving scan results:', error);
       Alert.alert('Error', 'Failed to save scan results. Please try again.');
@@ -171,6 +192,109 @@ const ScanPlantScreen = () => {
       [section]: !prev[section]
     }));
   };
+
+  const renderDiseaseCard = ({ disease, index }: { disease: any, index: number }) => (
+    <View key={index} style={styles.detailCard}>
+      <Text style={styles.detailTitle}>{disease.name}</Text>
+      <Text style={styles.detailSubtitle}>{disease.scientificName}</Text>
+      
+      {hasPremiumAccess ? (
+        <>
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Description:</Text>
+            <Text style={styles.detailValue}>{disease.description}</Text>
+          </View>
+          
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Causes:</Text>
+            {disease.causes.map((cause: string, i: number) => (
+              <Text key={i} style={styles.bulletItem}>• {cause}</Text>
+            ))}
+          </View>
+          
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Symptoms:</Text>
+            {disease.symptoms.map((symptom: string, i: number) => (
+              <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
+            ))}
+          </View>
+          
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Treatments:</Text>
+            {disease.treatments.map((treatment: any, i: number) => (
+              <View key={i} style={styles.treatmentCard}>
+                <Text style={styles.treatmentName}>{treatment.name}</Text>
+                <Text style={styles.treatmentDescription}>{treatment.description}</Text>
+                <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
+                <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
+                <Text style={styles.treatmentEffectiveness}>Effectiveness: {treatment.effectiveness}%</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : (
+        <View style={styles.upgradeContainer}>
+          <Text style={styles.upgradeText}>Subscribe to Premium Plan to see full disease details and treatment guides</Text>
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate('SubscriptionScreen')}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderPestCard = ({ pest, index }: { pest: any, index: number }) => (
+    <View key={index} style={styles.detailCard}>
+      <Text style={styles.detailTitle}>{pest.name}</Text>
+      <Text style={styles.detailSubtitle}>{pest.scientificName}</Text>
+      
+      {hasPremiumAccess ? (
+        <>
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Type:</Text>
+            <Text style={styles.detailValue}>{pest.type}</Text>
+          </View>
+          
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Description:</Text>
+            <Text style={styles.detailValue}>{pest.description}</Text>
+          </View>
+          
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Damage/Symptoms:</Text>
+            {pest.symptoms.map((symptom: string, i: number) => (
+              <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
+            ))}
+          </View>
+          
+          <View style={styles.detailSection}>
+            <Text style={styles.detailLabel}>Treatments:</Text>
+            {pest.treatments.map((treatment: any, i: number) => (
+              <View key={i} style={styles.treatmentCard}>
+                <Text style={styles.treatmentName}>{treatment.name}</Text>
+                <Text style={styles.treatmentDescription}>{treatment.description}</Text>
+                <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
+                <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : (
+        <View style={styles.upgradeContainer}>
+          <Text style={styles.upgradeText}>Subscribe to Premium Plan to see full pest details and treatment guides</Text>
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => navigation.navigate('SubscriptionScreen')}
+          >
+            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -317,44 +441,7 @@ const ScanPlantScreen = () => {
 
                   {expandedSections.diseases && (
                     <View style={styles.expandedContent}>
-                      {results.diseases.map((disease, index) => (
-                        <View key={index} style={styles.detailCard}>
-                          <Text style={styles.detailTitle}>{disease.name}</Text>
-                          <Text style={styles.detailSubtitle}>{disease.scientificName}</Text>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Common Names:</Text>
-                            <Text style={styles.detailValue}>{disease.commonNames.join(', ')}</Text>
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Description:</Text>
-                            <Text style={styles.detailValue}>{disease.description}</Text>
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Causes:</Text>
-                            {disease.causes.map((cause: string, i: number) => (
-                              <Text key={i} style={styles.bulletItem}>• {cause}</Text>
-                            ))}
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Symptoms:</Text>
-                            {disease.symptoms.map((symptom: string, i: number) => (
-                              <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
-                            ))}
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Treatments:</Text>
-                            {disease.treatments.map((treatment: any, i: number) => (
-                              <View key={i} style={styles.treatmentCard}>
-                                <Text style={styles.treatmentName}>{treatment.name}</Text>
-                                <Text style={styles.treatmentDescription}>{treatment.description}</Text>
-                                <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
-                                <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
-                                <Text style={styles.treatmentEffectiveness}>Effectiveness: {treatment.effectiveness}%</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      ))}
+                      {results.diseases.map((disease, index) => renderDiseaseCard({ disease, index }))}
                     </View>
                   )}
                 </View>
@@ -376,37 +463,7 @@ const ScanPlantScreen = () => {
 
                   {expandedSections.pests && (
                     <View style={styles.expandedContent}>
-                      {results.pests.map((pest, index) => (
-                        <View key={index} style={styles.detailCard}>
-                          <Text style={styles.detailTitle}>{pest.name}</Text>
-                          <Text style={styles.detailSubtitle}>{pest.scientificName}</Text>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Type:</Text>
-                            <Text style={styles.detailValue}>{pest.type}</Text>
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Description:</Text>
-                            <Text style={styles.detailValue}>{pest.description}</Text>
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Damage/Symptoms:</Text>
-                            {pest.symptoms.map((symptom: string, i: number) => (
-                              <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
-                            ))}
-                          </View>
-                          <View style={styles.detailSection}>
-                            <Text style={styles.detailLabel}>Treatments:</Text>
-                            {pest.treatments.map((treatment: any, i: number) => (
-                              <View key={i} style={styles.treatmentCard}>
-                                <Text style={styles.treatmentName}>{treatment.name}</Text>
-                                <Text style={styles.treatmentDescription}>{treatment.description}</Text>
-                                <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
-                                <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      ))}
+                      {results.pests.map((pest, index) => renderPestCard({ pest, index }))}
                     </View>
                   )}
                 </View>
@@ -782,6 +839,29 @@ const styles = StyleSheet.create({
   healthyText: {
     marginLeft: 10,
     color: '#46A200',
+    fontWeight: 'bold',
+  },
+  upgradeContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  upgradeText: {
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  upgradeButton: {
+    backgroundColor: '#46A200',
+    padding: 10,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: 'white',
     fontWeight: 'bold',
   },
 });
