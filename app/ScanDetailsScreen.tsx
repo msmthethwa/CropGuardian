@@ -25,18 +25,13 @@ interface ScanDetails {
   scientificName: string;
   imageUrl: string;
   createdAt: Date;
-  diseaseName: string;
-  cause: string;
-  treatment: string;
-  prevention: string;
-  pestName: string;
-  pestPrevention: string;
-  confidence: number;
-  overallHealth: number;
-  recommendations: string[];
-  nextSteps: string[];
   diseases: any[];
   pests: any[];
+  recommendations: string[];
+  nextSteps: string[];
+  confidence: number;
+  overallHealth: number;
+  isHealthy: boolean;
 }
 
 const ScanDetailsScreen = () => {
@@ -68,18 +63,13 @@ const ScanDetailsScreen = () => {
             scientificName: data.scientificName || '',
             imageUrl: data.imageUrl || '',
             createdAt: data.createdAt?.toDate() || new Date(),
-            diseaseName: data.diseaseName || 'No disease detected',
-            cause: data.cause || 'N/A',
-            treatment: data.treatment || 'N/A',
-            prevention: data.prevention || 'N/A',
-            pestName: data.pestName || 'No pest detected',
-            pestPrevention: data.pestPrevention || 'N/A',
-            confidence: data.confidence || 0,
-            overallHealth: data.overallHealth || 100,
-            recommendations: data.recommendations || [],
-            nextSteps: data.nextSteps || [],
             diseases: data.diseases || [],
             pests: data.pests || [],
+            recommendations: data.recommendations || [],
+            nextSteps: data.nextSteps || [],
+            confidence: data.confidence || 0,
+            overallHealth: data.overallHealth || 100,
+            isHealthy: data.isHealthy !== undefined ? data.isHealthy : (data.diseases?.length === 0 && data.pests?.length === 0),
           });
         } else {
           setError('Scan not found');
@@ -99,15 +89,22 @@ const ScanDetailsScreen = () => {
     if (!scanDetails) return;
 
     try {
-      const status = scanDetails.diseaseName === 'No disease detected' ? 'Healthy 🌿' : 'Unhealthy ⚠️';
+      const status = scanDetails.isHealthy ? 'Healthy 🌿' : 'Unhealthy ⚠️';
+      const hasDiseases = scanDetails.diseases.length > 0;
+      const hasPests = scanDetails.pests.length > 0;
+      
+      const diseaseName = hasDiseases ? scanDetails.diseases[0]?.name || 'Disease detected' : 'No disease detected';
+      const pestName = hasPests ? scanDetails.pests[0]?.name || 'Pest detected' : 'No pest detected';
 
       const imageDirectLink = scanDetails.imageUrl;
 
       const message = `🌱 My Plant Health Scan Results from Crop Guardian App\n\n` +
         `Just scanned my ${scanDetails.plantName} using Crop Guardian! Here's what I found:\n\n` +
         `🔍 Status: ${status}\n` +
-        `🦠 Disease Detected: ${scanDetails.diseaseName}\n` +
-        `🐛 Pest Detected: ${scanDetails.pestName}\n\n` +
+        `🦠 Disease Detected: ${diseaseName}\n` +
+        `🐛 Pest Detected: ${pestName}\n` +
+        `📊 Overall Health: ${scanDetails.overallHealth}%\n` +
+        `🎯 Confidence: ${Math.round(scanDetails.confidence * 100)}%\n\n` +
         `The app provided detailed insights on causes, treatments, and prevention methods to keep my plants thriving!\n\n` +
         `Try Crop Guardian App for your plant care needs – it's like having a botanist in your pocket!\n\n` +
         `View the scan image: ${imageDirectLink}\n\n` +
@@ -123,7 +120,7 @@ const ScanDetailsScreen = () => {
   };
 
   const getStatusColor = () => {
-    return scanDetails?.diseaseName === 'No disease detected' ? '#10B981' : '#EF4444';
+    return scanDetails?.isHealthy ? '#10B981' : '#EF4444';
   };
 
   if (loading) {
@@ -162,6 +159,9 @@ const ScanDetailsScreen = () => {
     );
   }
 
+  const hasDiseases = scanDetails.diseases.length > 0;
+  const hasPests = scanDetails.pests.length > 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
@@ -194,7 +194,7 @@ const ScanDetailsScreen = () => {
           />
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>
-              {scanDetails.diseaseName === 'No disease detected' ? 'Healthy' : 'Unhealthy'}
+              {scanDetails.isHealthy ? 'Healthy' : 'Unhealthy'}
             </Text>
           </View>
         </View>
@@ -239,39 +239,120 @@ const ScanDetailsScreen = () => {
             </View>
           </View>
 
-          <View style={styles.sectionDivider}>
-            <Text style={styles.sectionTitle}>Disease Information</Text>
-          </View>
+          {hasDiseases && (
+            <>
+              <View style={styles.sectionDivider}>
+                <Text style={styles.sectionTitle}>Diseases Detected ({scanDetails.diseases.length})</Text>
+              </View>
+              {scanDetails.diseases.map((disease, index) => (
+                <View key={index} style={styles.detailCard}>
+                  <Text style={styles.detailTitle}>{disease.name}</Text>
+                  <Text style={styles.detailSubtitle}>{disease.scientificName}</Text>
+                  
+                  {disease.description && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Description:</Text>
+                      <Text style={styles.detailValue}>{disease.description}</Text>
+                    </View>
+                  )}
+                  
+                  {disease.causes && disease.causes.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Causes:</Text>
+                      {disease.causes.map((cause: string, i: number) => (
+                        <Text key={i} style={styles.bulletItem}>• {cause}</Text>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {disease.symptoms && disease.symptoms.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Symptoms:</Text>
+                      {disease.symptoms.map((symptom: string, i: number) => (
+                        <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {disease.treatments && disease.treatments.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Treatments:</Text>
+                      {disease.treatments.map((treatment: any, i: number) => (
+                        <View key={i} style={styles.treatmentCard}>
+                          <Text style={styles.treatmentName}>{treatment.name}</Text>
+                          <Text style={styles.treatmentDescription}>{treatment.description}</Text>
+                          <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
+                          <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
+                          <Text style={styles.treatmentEffectiveness}>Effectiveness: {treatment.effectiveness}%</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Disease</Text>
-            <Text style={[styles.detailValue, { color: getStatusColor() }]}>
-              {scanDetails.diseaseName}
-            </Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Cause</Text>
-            <Text style={styles.detailValue}>{scanDetails.cause}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Treatment</Text>
-            <Text style={styles.detailValue}>{scanDetails.treatment}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Prevention</Text>
-            <Text style={styles.detailValue}>{scanDetails.prevention}</Text>
-          </View>
+          {hasPests && (
+            <>
+              <View style={styles.sectionDivider}>
+                <Text style={styles.sectionTitle}>Pests Detected ({scanDetails.pests.length})</Text>
+              </View>
+              {scanDetails.pests.map((pest, index) => (
+                <View key={index} style={styles.detailCard}>
+                  <Text style={styles.detailTitle}>{pest.name}</Text>
+                  <Text style={styles.detailSubtitle}>{pest.scientificName}</Text>
+                  
+                  {pest.type && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Type:</Text>
+                      <Text style={styles.detailValue}>{pest.type}</Text>
+                    </View>
+                  )}
+                  
+                  {pest.description && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Description:</Text>
+                      <Text style={styles.detailValue}>{pest.description}</Text>
+                    </View>
+                  )}
+                  
+                  {pest.symptoms && pest.symptoms.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Damage/Symptoms:</Text>
+                      {pest.symptoms.map((symptom: string, i: number) => (
+                        <Text key={i} style={styles.bulletItem}>• {symptom}</Text>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {pest.treatments && pest.treatments.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>Treatments:</Text>
+                      {pest.treatments.map((treatment: any, i: number) => (
+                        <View key={i} style={styles.treatmentCard}>
+                          <Text style={styles.treatmentName}>{treatment.name}</Text>
+                          <Text style={styles.treatmentDescription}>{treatment.description}</Text>
+                          <Text style={styles.treatmentMethod}>Method: {treatment.method}</Text>
+                          <Text style={styles.treatmentFrequency}>Frequency: {treatment.frequency}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
 
           {scanDetails.recommendations && scanDetails.recommendations.length > 0 && (
             <>
               <View style={styles.sectionDivider}>
                 <Text style={styles.sectionTitle}>Recommendations</Text>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailValue}>{scanDetails.recommendations.join('\n')}</Text>
+              <View style={styles.detailSection}>
+                {scanDetails.recommendations.map((rec, index) => (
+                  <Text key={index} style={styles.bulletItem}>• {rec}</Text>
+                ))}
               </View>
             </>
           )}
@@ -281,30 +362,19 @@ const ScanDetailsScreen = () => {
               <View style={styles.sectionDivider}>
                 <Text style={styles.sectionTitle}>Next Steps</Text>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailValue}>{scanDetails.nextSteps.join('\n')}</Text>
+              <View style={styles.detailSection}>
+                {scanDetails.nextSteps.map((step, index) => (
+                  <Text key={index} style={styles.bulletItem}>• {step}</Text>
+                ))}
               </View>
             </>
           )}
 
-          {scanDetails.pestName !== 'No pest detected' && (
-            <>
-              <View style={styles.sectionDivider}>
-                <Text style={styles.sectionTitle}>Pest Information</Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Pest</Text>
-                <Text style={[styles.detailValue, { color: '#EF4444' }]}>
-                  {scanDetails.pestName}
-                </Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Pest Prevention</Text>
-                <Text style={styles.detailValue}>{scanDetails.pestPrevention}</Text>
-              </View>
-            </>
+          {!hasDiseases && !hasPests && (
+            <View style={styles.healthyStatus}>
+              <Ionicons name="checkmark-circle" size={24} color="#46A200" />
+              <Text style={styles.healthyText}>Plant appears to be healthy! No diseases or pests detected.</Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -357,12 +427,12 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-  color: '#fff',
-  fontSize: 22,
-  fontWeight: '600',
-  textAlign: 'center',
-  flex: 1,
-  marginHorizontal: 12,
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+    marginHorizontal: 12,
   },
   shareButton: {
     padding: 8,
@@ -450,6 +520,75 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
+  },
+  detailCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  detailSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  detailSection: {
+    marginBottom: 12,
+  },
+  bulletItem: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginLeft: 8,
+    marginBottom: 4,
+  },
+  treatmentCard: {
+    backgroundColor: '#e9f5e9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  treatmentName: {
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  treatmentDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  treatmentMethod: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#666',
+  },
+  treatmentFrequency: {
+    fontSize: 12,
+    color: '#666',
+  },
+  treatmentEffectiveness: {
+    fontSize: 12,
+    color: '#666',
+  },
+  healthyStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+  },
+  healthyText: {
+    marginLeft: 10,
+    color: '#46A200',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

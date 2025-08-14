@@ -28,13 +28,13 @@ interface PlantScan {
   scientificName: string;
   imageUrl: string;
   timestamp: Date;
-  diseaseName: string;
-  cause: string;
-  treatment: string;
-  prevention: string;
-  pestName: string;
-  pestPrevention: string;
+  diseases: any[];
+  pests: any[];
   overallHealth: number;
+  recommendations: string[];
+  nextSteps: string[];
+  confidence: number;
+  isHealthy: boolean;
 }
 
 type FilterOption = 'all' | 'healthy' | 'unhealthy' | 'pest';
@@ -67,13 +67,13 @@ const PlantScanHistoryScreen = () => {
           scientificName: data.scientificName || '',
           imageUrl: imageUrl,
           timestamp: data.createdAt ? data.createdAt.toDate() : new Date(),
-          diseaseName: data.diseaseName || 'No disease detected',
-          cause: data.cause || 'N/A',
-          treatment: data.treatment || 'N/A',
-          prevention: data.prevention || 'N/A',
-          pestName: data.pestName || 'No pest detected',
-          pestPrevention: data.pestPrevention || 'N/A',
+          diseases: data.diseases || [],
+          pests: data.pests || [],
           overallHealth: data.overallHealth || 100,
+          recommendations: data.recommendations || [],
+          nextSteps: data.nextSteps || [],
+          confidence: data.confidence || 0,
+          isHealthy: data.isHealthy !== undefined ? data.isHealthy : (data.diseases?.length === 0 && data.pests?.length === 0),
         };
       });
       setScans(scansData);
@@ -86,8 +86,8 @@ const PlantScanHistoryScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  const getStatusColor = (diseaseName: string) => {
-    return diseaseName === 'No disease detected' ? '#10B981' : '#EF4444';
+  const getStatusColor = (isHealthy: boolean) => {
+    return isHealthy ? '#10B981' : '#EF4444';
   };
 
   const getHealthColor = (percentage: number): string => {
@@ -101,20 +101,20 @@ const PlantScanHistoryScreen = () => {
     // Apply search filter
     const matchesSearch = searchQuery === '' || 
       scan.plantName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (scan.diseaseName && scan.diseaseName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (scan.pestName && scan.pestName.toLowerCase().includes(searchQuery.toLowerCase()));
+      (scan.diseases && scan.diseases.some(d => d.name && d.name.toLowerCase().includes(searchQuery.toLowerCase()))) ||
+      (scan.pests && scan.pests.some(p => p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())));
     
     // Apply status filter
     let matchesFilter = true;
     switch (selectedFilter) {
       case 'healthy':
-        matchesFilter = scan.diseaseName === 'No disease detected' && scan.pestName === 'No pest detected';
+        matchesFilter = scan.isHealthy;
         break;
       case 'unhealthy':
-        matchesFilter = scan.diseaseName !== 'No disease detected';
+        matchesFilter = !scan.isHealthy && scan.diseases.length > 0;
         break;
       case 'pest':
-        matchesFilter = scan.pestName !== 'No pest detected';
+        matchesFilter = scan.pests.length > 0;
         break;
       case 'all':
       default:
@@ -126,6 +126,11 @@ const PlantScanHistoryScreen = () => {
 
   const renderScanCard = ({ item }: { item: PlantScan }) => {
     const scan = item;
+    const hasDiseases = scan.diseases.length > 0;
+    const hasPests = scan.pests.length > 0;
+    const diseaseName = hasDiseases ? scan.diseases[0]?.name || 'Disease detected' : 'No disease detected';
+    const pestName = hasPests ? scan.pests[0]?.name || 'Pest detected' : 'No pest detected';
+    
     return (
       <TouchableOpacity 
         style={styles.card}
@@ -134,10 +139,10 @@ const PlantScanHistoryScreen = () => {
         <View style={styles.imageContainer}>
           <Image source={{ uri: scan.imageUrl }} style={styles.image} />
           <View style={[styles.statusBadge, { 
-            backgroundColor: getStatusColor(scan.diseaseName) 
+            backgroundColor: getStatusColor(scan.isHealthy) 
           }]}>
             <Text style={styles.statusText}>
-              {scan.diseaseName === 'No disease detected' ? 'Healthy' : 'Unhealthy'}
+              {scan.isHealthy ? 'Healthy' : 'Unhealthy'}
             </Text>
           </View>
         </View>
@@ -162,12 +167,12 @@ const PlantScanHistoryScreen = () => {
               {scan.overallHealth || 100}% Health
             </Text>
           </View>
-          <Text style={[styles.disease, { color: getStatusColor(scan.diseaseName) }]}>
-            {scan.diseaseName}
+          <Text style={[styles.disease, { color: getStatusColor(hasDiseases) }]}>
+            {diseaseName}
           </Text>
-          {scan.pestName !== 'No pest detected' && (
+          {hasPests && (
             <Text style={[styles.disease, { color: '#EF4444' }]}>
-              Pest: {scan.pestName}
+              Pest: {pestName}
             </Text>
           )}
         </View>
